@@ -27,12 +27,14 @@ with open(readsfq_filename, "r") as read_file, open("filtered_reads.fasta", "w")
 	print(len(filtreads_list))
 	SeqIO.write(filtreads_list, filtered_file, "fasta")
 
-#print("Blasting valid reads against local reference database")
+print("Blasting valid reads against local reference database")
 
-#cline = NcbiblastnCommandline(query="filtered_reads.fasta", subject=database_filename, \
-#	evalue=0.01, out="blast_results.xml", outfmt=5, perc_identity=80, ungapped=True, word_size=5, num_threads=4)
+cline = NcbiblastnCommandline(query="filtered_reads.fasta", subject=database_filename, \
+	evalue=0.01, out="blast_results.xml", outfmt=5, \
+	#word_size=15, gapopen=3, gapextend=2, reward=2, num_threads=4, perc_identity=70, word_size=15)
+	task="blastn", num_threads=4)
 
-#stdout, stderr = cline()
+stdout, stderr = cline()
 
 print("Parsing BLAST results")
 
@@ -42,15 +44,19 @@ total_hits = 0
 with open("blast_results.xml") as result_handle:
 	blast_records = NCBIXML.parse(result_handle)
 	for blast_record in blast_records:
+		query_len = blast_record.query_length
 		for alignment in blast_record.alignments:
+			total_qhitlenght = 0
 			for hsp in alignment.hsps:
-				#if len(hsp.query) == k:
+				total_qhitlenght += len(hsp.query)
 				total_hits += 1
-				print(str(blast_record.query).split()[0])
-				reads_w_hits.add(str(blast_record.query).split()[0])
 					#print('sequence:', alignment.title)
 					#print('length:', alignment.length)
 					#print('e value:', hsp.expect)
+			print(str(total_qhitlenght) + " " + str(query_len))
+			#if total_qhitlenght >= query_len*0.5:
+			if total_qhitlenght >= 100:
+				reads_w_hits.add(str(blast_record.query).split()[0])
 
 print("Total of %s" % str(total_hits))
 print("belonging to %s reads" % str(len(reads_w_hits)))
